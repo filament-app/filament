@@ -1,0 +1,247 @@
+'use client'
+
+import { useState, useRef } from 'react'
+
+type ModelId = 'auto' | 'claude' | 'gpt' | 'gemini'
+
+interface TraceInfo {
+  model_used: string
+  model_requested: string
+  tokens_in: number
+  tokens_out: number
+  latency_ms: number
+  status: string
+  trace_id: string
+}
+
+const MODEL_DESCRIPTIONS: Record<ModelId, string> = {
+  auto: 'Filament selects based on prompt type',
+  claude: 'claude-sonnet-4-20250514',
+  gpt: 'gpt-4o',
+  gemini: 'gemini-1.5-pro',
+}
+
+export default function RouterPage() {
+  const [model, setModel] = useState<ModelId>('auto')
+  const [prompt, setPrompt] = useState('')
+  const [system, setSystem] = useState('')
+  const [showSystem, setShowSystem] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [response, setResponse] = useState('')
+  const [trace, setTrace] = useState<TraceInfo | null>(null)
+  const [rawJson, setRawJson] = useState<string | null>(null)
+  const [showRaw, setShowRaw] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const models: ModelId[] = ['auto', 'claude', 'gpt', 'gemini']
+
+  async function handleRun() {
+    if (!prompt.trim()) return
+    setLoading(true)
+    setResponse('')
+    setTrace(null)
+    setRawJson(null)
+    setError(null)
+
+    const start = Date.now()
+
+    try {
+      const res = await fetch('/api/route', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: prompt.trim(),
+          model,
+          system: system.trim() || undefined,
+        }),
+      })
+
+      const data = await res.json()
+      const elapsed = Date.now() - start
+
+      if (!res.ok) {
+        setError(data.error || 'Request failed')
+        return
+      }
+
+      setRawJson(JSON.stringify(data, null, 2))
+      setResponse(data.choices?.[0]?.message?.content || '')
+      setTrace({
+        model_used: data.filament?.model_used || data.model || 'unknown',
+        model_requested: model,
+        tokens_in: data.usage?.prompt_tokens || 0,
+        tokens_out: data.usage?.completion_tokens || 0,
+        latency_ms: data.filament?.latency_ms || elapsed,
+        status: data.filament?.status || 'ok',
+        trace_id: data.id || '',
+      })
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error'
+      setError(errorMessage)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex h-[calc(100vh-56px)]">
+      {/* Left panel */}
+      <div className="w-[40%] border-r border-[#E5E2DA] flex flex-col">
+        <div className="p-6 border-b border-[#E5E2DA]">
+          <h1 className="font-[family-name:var(--font-barlow)] font-bold text-[20px] uppercase tracking-wide text-[#0D0D0D]">
+            Unified Router
+          </h1>
+          <p className="font-mono text-[12px] text-[#8A8A8A] mt-1">
+            Route any prompt to any model.
+          </p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+          {/* Model selector */}
+          <div>
+            <label className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest block mb-3">
+              Model
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {models.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setModel(m)}
+                  className={`font-mono text-[12px] px-3 py-2.5 border text-left transition-colors ${
+                    model === m
+                      ? 'border-[#0D0D0D] bg-[#0D0D0D] text-white'
+                      : 'border-[#E5E2DA] text-[#8A8A8A] hover:border-[#0D0D0D] hover:text-[#0D0D0D]'
+                  }`}
+                >
+                  <span className="font-bold">{m.toUpperCase()}</span>
+                  {model === m && (
+                    <span className="block text-[10px] opacity-60 mt-0.5 truncate">
+                      {MODEL_DESCRIPTIONS[m]}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* System prompt */}
+          <div>
+            <button
+              onClick={() => setShowSystem(!showSystem)}
+              className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest flex items-center gap-2"
+            >
+              System prompt
+              <span className={`transition-transform ${showSystem ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+            {showSystem && (
+              <textarea
+                value={system}
+                onChange={(e) => setSystem(e.target.value)}
+                placeholder="You are a helpful assistant."
+                rows={3}
+                className="w-full mt-3 font-mono text-[12px] p-3 border border-[#E5E2DA] bg-[#F7F4EE] text-[#0D0D0D] resize-none focus:outline-none focus:border-[#0D0D0D] placeholder-[#8A8A8A]"
+              />
+            )}
+          </div>
+
+          {/* Prompt */}
+          <div className="flex-1">
+            <label className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest block mb-3">
+              Prompt
+            </label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              placeholder="What is an embedding?"
+              rows={8}
+              className="w-full font-mono text-[13px] p-3 border border-[#E5E2DA] text-[#0D0D0D] resize-none focus:outline-none focus:border-[#0D0D0D] placeholder-[#8A8A8A] bg-white"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleRun()
+              }}
+            />
+            <p className="font-mono text-[10px] text-[#8A8A8A] mt-1">Cmd+Enter to run</p>
+          </div>
+
+          {/* Run button */}
+          <button
+            onClick={handleRun}
+            disabled={loading || !prompt.trim()}
+            className="w-full font-mono text-[13px] py-3 border border-[#0D0D0D] text-[#0D0D0D] hover:bg-[#0D0D0D] hover:text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Running...' : 'Run →'}
+          </button>
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div className="flex-1 flex flex-col">
+        {/* Trace row */}
+        {trace && (
+          <div className="border-b border-[#E5E2DA] px-6 py-3 flex items-center gap-6 bg-[#F7F4EE] flex-wrap">
+            <span className="font-mono text-[11px] text-[#0D0D0D] font-bold uppercase">{trace.model_used}</span>
+            <span className="font-mono text-[11px] text-[#8A8A8A]">{trace.tokens_in}→{trace.tokens_out} tokens</span>
+            <span className="font-mono text-[11px] text-[#8A8A8A]">{trace.latency_ms}ms</span>
+            <span className={`font-mono text-[11px] px-2 py-0.5 border ${
+              trace.status === 'ok' ? 'border-[#2a6a3a] text-[#2a6a3a]' :
+              trace.status === 'fallback' ? 'border-[#6a5a2a] text-[#6a5a2a]' :
+              'border-[#6a2a2a] text-[#6a2a2a]'
+            }`}>
+              {trace.status}
+            </span>
+            <div className="ml-auto flex items-center gap-3">
+              <button
+                onClick={() => setShowRaw(!showRaw)}
+                className="font-mono text-[11px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors"
+              >
+                {showRaw ? 'Response' : 'Raw JSON'}
+              </button>
+              {response && (
+                <button
+                  onClick={() => navigator.clipboard.writeText(showRaw ? rawJson || '' : response)}
+                  className="font-mono text-[11px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors"
+                >
+                  Copy
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Output */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading && (
+            <div className="flex items-center gap-3">
+              <div className="w-1.5 h-1.5 bg-[#0D0D0D] animate-pulse" />
+              <span className="font-mono text-[13px] text-[#8A8A8A]">Routing request...</span>
+            </div>
+          )}
+          {error && (
+            <div className="border border-[#6a2a2a] p-4 font-mono text-[13px] text-[#6a2a2a]">
+              {error}
+            </div>
+          )}
+          {!loading && !error && !response && (
+            <div className="text-center py-20">
+              <p className="font-mono text-[13px] text-[#8A8A8A]">
+                Response appears here.
+              </p>
+              <p className="font-mono text-[11px] text-[#E5E2DA] mt-2">
+                Select a model and enter a prompt.
+              </p>
+            </div>
+          )}
+          {!loading && !error && response && !showRaw && (
+            <div className="font-mono text-[13px] text-[#0D0D0D] leading-relaxed whitespace-pre-wrap">
+              {response}
+            </div>
+          )}
+          {!loading && rawJson && showRaw && (
+            <pre className="font-mono text-[12px] text-[#0D0D0D] leading-relaxed whitespace-pre-wrap overflow-x-auto bg-[#F7F4EE] p-4 border border-[#E5E2DA]">
+              {rawJson}
+            </pre>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

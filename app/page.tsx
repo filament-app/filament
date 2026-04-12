@@ -1,101 +1,637 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+
+// ─── Nav ───────────────────────────────────────────────────────────────────
+function Nav() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur border-b border-[#E5E2DA]">
+      <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+        <span className="font-[family-name:var(--font-barlow)] font-bold text-[22px] tracking-wide uppercase text-[#0D0D0D]">
+          FILAMENT
+        </span>
+        <div className="flex items-center gap-8">
+          <Link href="/docs" className="hidden md:block font-mono text-[12px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors">
+            Docs
+          </Link>
+          <Link href="#how-it-works" className="hidden md:block font-mono text-[12px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors">
+            How it works
+          </Link>
+          <Link href="#pricing" className="hidden md:block font-mono text-[12px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors">
+            Pricing
+          </Link>
+          <Link
+            href="/app"
+            className="font-mono text-[12px] px-4 py-2 border border-[#0D0D0D] text-[#0D0D0D] hover:bg-[#0D0D0D] hover:text-white transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Launch App →
+          </Link>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+    </nav>
+  )
+}
+
+// ─── Terminal Typewriter ────────────────────────────────────────────────────
+const TERMINAL_LINES = [
+  { type: 'cmd', text: 'curl -X POST https://filament.works/api/route \\' },
+  { type: 'cmd', text: '  -H "Authorization: Bearer fl-a3f9..." \\' },
+  { type: 'cmd', text: '  -d \'{"model":"auto","prompt":"What is RAG?"}\'' },
+  { type: 'gap', text: '' },
+  { type: 'resp', text: '{' },
+  { type: 'resp', text: '  "model": "gemini-1.5-pro",' },
+  { type: 'resp', text: '  "choices": [{' },
+  { type: 'resp', text: '    "message": {' },
+  { type: 'resp', text: '      "role": "assistant",' },
+  { type: 'resp', text: '      "content": "RAG is a technique..."' },
+  { type: 'resp', text: '    }' },
+  { type: 'resp', text: '  }],' },
+  { type: 'resp', text: '  "filament": {' },
+  { type: 'resp', text: '    "model_used": "gemini",' },
+  { type: 'resp', text: '    "latency_ms": 312,' },
+  { type: 'resp', text: '    "status": "ok"' },
+  { type: 'resp', text: '  }' },
+  { type: 'resp', text: '}' },
+]
+
+function TerminalBlock() {
+  const [visibleLines, setVisibleLines] = useState(0)
+
+  useEffect(() => {
+    let i = 0
+    const interval = setInterval(() => {
+      i++
+      setVisibleLines(i)
+      if (i >= TERMINAL_LINES.length) clearInterval(interval)
+    }, 120)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <div className="bg-[#0D0D0D] border border-[#2a2a2a] p-5 font-mono text-[13px] leading-relaxed overflow-hidden">
+      <div className="flex items-center gap-2 mb-4 pb-3 border-b border-[#2a2a2a]">
+        <div className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
+        <div className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
+        <div className="w-2.5 h-2.5 rounded-full bg-[#3a3a3a]" />
+        <span className="ml-2 text-[#8A8A8A] text-[11px]">filament.works/api/route</span>
+      </div>
+      {TERMINAL_LINES.slice(0, visibleLines).map((line, i) => (
+        <div key={i} className={
+          line.type === 'gap' ? 'h-3' :
+          line.type === 'cmd' ? 'text-[#F7F4EE]' :
+          'text-[#8A8A8A]'
+        }>
+          {line.type === 'cmd' && <span className="text-[#4a4a4a] select-none">$ </span>}
+          {line.text}
+          {i === visibleLines - 1 && line.type !== 'gap' && (
+            <span className="inline-block w-[7px] h-[14px] bg-[#F7F4EE] ml-0.5 animate-pulse" />
+          )}
+        </div>
+      ))}
     </div>
-  );
+  )
+}
+
+// ─── Hero ───────────────────────────────────────────────────────────────────
+function Hero() {
+  return (
+    <section className="pt-32 pb-20 px-6 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-16 items-start">
+          <div>
+            <div className="mb-6">
+              <span className="font-mono text-[11px] text-[#8A8A8A] border border-[#E5E2DA] px-3 py-1">
+                v1.0.0 — now available
+              </span>
+            </div>
+            <h1 className="font-[family-name:var(--font-barlow)] font-extrabold text-[72px] md:text-[88px] leading-[0.92] tracking-tight text-[#0D0D0D] mb-8">
+              The wire your<br />AI stack<br />runs on.
+            </h1>
+            <p className="font-mono text-[14px] text-[#8A8A8A] leading-relaxed mb-10 max-w-md">
+              One endpoint. Any model. Full observability.<br />
+              No configuration creep.
+            </p>
+            <div className="flex items-center gap-4 flex-wrap">
+              <Link
+                href="/app"
+                className="font-mono text-[13px] px-6 py-3 border border-[#0D0D0D] text-[#0D0D0D] hover:bg-[#0D0D0D] hover:text-white transition-colors"
+              >
+                Get API Key
+              </Link>
+              <Link
+                href="/docs"
+                className="font-mono text-[13px] px-6 py-3 text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors"
+              >
+                Read the docs →
+              </Link>
+            </div>
+          </div>
+          <div className="mt-4">
+            <TerminalBlock />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Ticker ─────────────────────────────────────────────────────────────────
+const TICKER_ITEMS = [
+  'Unified Routing', 'Tool Wiring', 'Observability', 'Hot-swap Models',
+  'OpenAI Compatible', 'Base Chain Ready', 'MCP Ready', 'skill.md Spec',
+  'Claude + GPT + Gemini', 'Latency Tracing', 'Per-key Rate Limits',
+  'Sub-400ms p50', 'Streaming Support', 'Agent-Native',
+]
+
+function Ticker() {
+  return (
+    <div className="bg-[#0D0D0D] border-y border-[#2a2a2a] overflow-hidden py-4">
+      <div
+        className="flex gap-0 whitespace-nowrap"
+        style={{ animation: 'marquee 40s linear infinite' }}
+      >
+        {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
+          <span key={i} className="flex items-center">
+            <span className="font-mono text-[12px] text-[#F7F4EE] tracking-widest uppercase px-6">
+              {item}
+            </span>
+            <span className="w-px h-3 bg-[#2a2a2a] shrink-0" />
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── How It Works ────────────────────────────────────────────────────────────
+function HowItWorks() {
+  const steps = [
+    {
+      n: '01',
+      title: 'Get your key',
+      body: 'Create an account. Get an API key. Takes 30 seconds.',
+      code: `export FILAMENT_KEY="fl-a3f9c2d8e1..."`,
+      lang: 'bash',
+    },
+    {
+      n: '02',
+      title: 'Route any model',
+      body: 'One endpoint routes your prompt to Claude, GPT-4o, or Gemini. Automatic fallback. No cold-starts.',
+      code: `POST /api/route\n{"model": "auto", "prompt": "..."}`,
+      lang: 'json',
+    },
+    {
+      n: '03',
+      title: 'Observe everything',
+      body: 'Every call is traced. Tokens, latency, model used, tool calls. Inspect in the dashboard or pull via API.',
+      code: `GET /api/observe?session=xxx`,
+      lang: 'bash',
+    },
+  ]
+
+  return (
+    <section id="how-it-works" className="py-24 px-6 bg-[#F7F4EE]">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-16">
+          <span className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest">How it works</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {steps.map((step) => (
+            <div key={step.n} className="border border-[#E5E2DA] bg-white p-8">
+              <div className="font-[family-name:var(--font-barlow)] font-bold text-[48px] text-[#E5E2DA] mb-4 leading-none">
+                {step.n}
+              </div>
+              <h3 className="font-[family-name:var(--font-barlow)] font-bold text-[22px] text-[#0D0D0D] mb-3 uppercase tracking-wide">
+                {step.title}
+              </h3>
+              <p className="font-mono text-[13px] text-[#8A8A8A] leading-relaxed mb-6">
+                {step.body}
+              </p>
+              <div className="bg-[#0D0D0D] p-4 font-mono text-[12px] text-[#F7F4EE] whitespace-pre leading-relaxed">
+                {step.code}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Features Grid ───────────────────────────────────────────────────────────
+const FEATURES = [
+  {
+    n: '01',
+    title: 'Unified Router',
+    body: 'One endpoint. Claude, GPT-4o, Gemini. Auto-routing by cost, latency, or capability.',
+  },
+  {
+    n: '02',
+    title: 'Tool Wiring',
+    body: 'Register any HTTP endpoint as a tool. Schema-validated. Hot-reloadable.',
+  },
+  {
+    n: '03',
+    title: 'Observability',
+    body: 'Every call traced end-to-end. Tokens, latency, model, tool calls, errors.',
+  },
+  {
+    n: '04',
+    title: 'Hot-swap',
+    body: 'Swap models mid-session without breaking context or tool bindings.',
+  },
+  {
+    n: '05',
+    title: 'skill.md',
+    body: 'Ships with a machine-readable skill spec at /skill.md. Drop it into any agent.',
+  },
+  {
+    n: '06',
+    title: 'OpenAI Compatible',
+    body: 'Drop-in replacement for any OpenAI client. Change one URL.',
+  },
+]
+
+function FeaturesGrid() {
+  return (
+    <section className="py-24 px-6 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-16">
+          <span className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest">Capabilities</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-0 border-t border-l border-[#E5E2DA]">
+          {FEATURES.map((f) => (
+            <div key={f.n} className="border-r border-b border-[#E5E2DA] p-8">
+              <div className="font-mono text-[11px] text-[#8A8A8A] mb-4">{f.n}</div>
+              <h3 className="font-[family-name:var(--font-barlow)] font-bold text-[20px] uppercase tracking-wide text-[#0D0D0D] mb-3">
+                {f.title}
+              </h3>
+              <p className="font-mono text-[13px] text-[#8A8A8A] leading-relaxed">
+                {f.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Code Demo ───────────────────────────────────────────────────────────────
+const CODE_TABS = {
+  cURL: `curl -X POST https://filament.works/api/route \\
+  -H "Authorization: Bearer fl-a3f9c2d8e1b5f7a4" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "auto",
+    "prompt": "Explain what an embedding is.",
+    "system": "Be concise."
+  }'`,
+
+  Python: `from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://filament.works/api",
+    api_key="fl-a3f9c2d8e1b5f7a4"
+)
+
+response = client.chat.completions.create(
+    model="auto",
+    messages=[
+        {"role": "user", "content": "Explain embeddings."}
+    ]
+)
+
+print(response.choices[0].message.content)
+print(response.model)  # whichever model was selected`,
+
+  Node: `import OpenAI from 'openai'
+
+const client = new OpenAI({
+  baseURL: 'https://filament.works/api',
+  apiKey: 'fl-a3f9c2d8e1b5f7a4',
+})
+
+const response = await client.chat.completions.create({
+  model: 'auto',
+  messages: [
+    { role: 'user', content: 'Explain embeddings.' }
+  ],
+})
+
+console.log(response.choices[0].message.content)
+console.log(response.model)`,
+
+  'MCP Config': `{
+  "mcpServers": {
+    "filament": {
+      "command": "npx",
+      "args": ["filament-mcp"],
+      "env": {
+        "FILAMENT_API_KEY": "fl-a3f9c2d8e1b5f7a4",
+        "FILAMENT_BASE_URL": "https://filament.works/api"
+      }
+    }
+  }
+}`,
+}
+
+const RESPONSE_PREVIEW = `{
+  "id": "tr_01j8xk4m...",
+  "object": "chat.completion",
+  "model": "gemini-1.5-pro",
+  "choices": [{
+    "message": {
+      "role": "assistant",
+      "content": "An embedding is a dense
+vector representation of data..."
+    },
+    "finish_reason": "stop"
+  }],
+  "usage": {
+    "prompt_tokens": 18,
+    "completion_tokens": 94,
+    "total_tokens": 112
+  },
+  "filament": {
+    "model_requested": "auto",
+    "model_used": "gemini",
+    "latency_ms": 287,
+    "status": "ok",
+    "trace_id": "tr_01j8xk4m..."
+  }
+}`
+
+function CodeDemo() {
+  const [activeTab, setActiveTab] = useState('cURL')
+  const tabs = Object.keys(CODE_TABS)
+
+  return (
+    <section className="py-24 px-6 bg-[#0D0D0D]">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-12">
+          <span className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest">Drop-in compatible</span>
+          <h2 className="font-[family-name:var(--font-barlow)] font-bold text-[40px] text-[#F7F4EE] uppercase tracking-wide mt-2">
+            One URL change.
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 border border-[#2a2a2a]">
+          {/* Left: code */}
+          <div className="border-r border-[#2a2a2a]">
+            <div className="flex border-b border-[#2a2a2a]">
+              {tabs.map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`font-mono text-[11px] px-5 py-3 border-r border-[#2a2a2a] transition-colors ${
+                    activeTab === tab
+                      ? 'bg-[#1a1a1a] text-[#F7F4EE]'
+                      : 'text-[#8A8A8A] hover:text-[#F7F4EE]'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+            <pre className="p-6 font-mono text-[12px] text-[#F7F4EE] leading-relaxed overflow-x-auto whitespace-pre">
+              {CODE_TABS[activeTab as keyof typeof CODE_TABS]}
+            </pre>
+          </div>
+          {/* Right: response */}
+          <div>
+            <div className="border-b border-[#2a2a2a] px-5 py-3">
+              <span className="font-mono text-[11px] text-[#8A8A8A]">Response</span>
+              <span className="ml-3 font-mono text-[11px] text-[#4a9a6a]">200 OK</span>
+            </div>
+            <pre className="p-6 font-mono text-[12px] text-[#8A8A8A] leading-relaxed overflow-x-auto whitespace-pre">
+              {RESPONSE_PREVIEW}
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── Observability Preview ───────────────────────────────────────────────────
+const TRACE_ROWS = [
+  { time: '14:32:01.287', session: 'sess_k9x2...', model: 'gemini-1.5-pro', t_in: 18, t_out: 94, latency: 287, status: 'ok' },
+  { time: '14:31:58.103', session: 'sess_k9x2...', model: 'claude-sonnet', t_in: 412, t_out: 638, latency: 891, status: 'ok' },
+  { time: '14:31:45.552', session: 'sess_m4r1...', model: 'gpt-4o', t_in: 67, t_out: 201, latency: 423, status: 'ok' },
+  { time: '14:31:22.018', session: 'sess_m4r1...', model: 'claude-sonnet', t_in: 89, t_out: 145, latency: 1102, status: 'fallback' },
+  { time: '14:30:59.774', session: 'sess_z8c3...', model: 'gpt-4o', t_in: 230, t_out: 418, latency: 389, status: 'ok' },
+]
+
+function ObservabilityPreview() {
+  return (
+    <section className="py-24 px-6 bg-[#F7F4EE]">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-12">
+          <span className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest">Observability</span>
+          <h2 className="font-[family-name:var(--font-barlow)] font-bold text-[40px] text-[#0D0D0D] uppercase tracking-wide mt-2">
+            Every call traced.
+          </h2>
+        </div>
+        <div className="border border-[#E5E2DA] bg-white overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-[#E5E2DA]">
+                {['timestamp', 'session', 'model', 'tokens_in', 'tokens_out', 'latency', 'status'].map((col) => (
+                  <th key={col} className="font-mono text-[11px] text-[#8A8A8A] text-left px-4 py-3 uppercase tracking-widest whitespace-nowrap">
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {TRACE_ROWS.map((row, i) => (
+                <tr key={i} className="border-b border-[#E5E2DA] last:border-0 hover:bg-[#F7F4EE] transition-colors">
+                  <td className="font-mono text-[12px] text-[#8A8A8A] px-4 py-3 whitespace-nowrap">{row.time}</td>
+                  <td className="font-mono text-[12px] text-[#0D0D0D] px-4 py-3 whitespace-nowrap">{row.session}</td>
+                  <td className="font-mono text-[12px] text-[#0D0D0D] px-4 py-3 whitespace-nowrap">{row.model}</td>
+                  <td className="font-mono text-[12px] text-[#0D0D0D] px-4 py-3 text-right">{row.t_in}</td>
+                  <td className="font-mono text-[12px] text-[#0D0D0D] px-4 py-3 text-right">{row.t_out}</td>
+                  <td className="font-mono text-[12px] text-[#0D0D0D] px-4 py-3 text-right">{row.latency}ms</td>
+                  <td className="px-4 py-3">
+                    <span className={`font-mono text-[11px] px-2 py-0.5 border ${
+                      row.status === 'ok' ? 'border-[#2a6a3a] text-[#2a6a3a]' :
+                      row.status === 'fallback' ? 'border-[#6a5a2a] text-[#6a5a2a]' :
+                      'border-[#6a2a2a] text-[#6a2a2a]'
+                    }`}>
+                      {row.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="font-mono text-[12px] text-[#8A8A8A] mt-6">
+          Full trace logs in your dashboard. Or pull via API.
+        </p>
+      </div>
+    </section>
+  )
+}
+
+// ─── Pricing ─────────────────────────────────────────────────────────────────
+const PLANS = [
+  {
+    name: 'Free',
+    price: '0',
+    period: '/mo',
+    features: ['100 req/day', '3 models', '7-day log retention'],
+    cta: 'Get started',
+  },
+  {
+    name: 'Builder',
+    price: '19',
+    period: '/mo',
+    features: ['10k req/day', 'All models', '30-day logs', 'Tool wiring'],
+    cta: 'Start building',
+    highlight: true,
+  },
+  {
+    name: 'Scale',
+    price: '99',
+    period: '/mo',
+    features: ['Unlimited', 'Priority routing', '90-day logs', 'SLA'],
+    cta: 'Contact us',
+  },
+]
+
+function Pricing() {
+  return (
+    <section id="pricing" className="py-24 px-6 bg-white">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-16">
+          <span className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest">Pricing</span>
+          <h2 className="font-[family-name:var(--font-barlow)] font-bold text-[40px] text-[#0D0D0D] uppercase tracking-wide mt-2">
+            Simple. No surprises.
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-t border-l border-[#E5E2DA]">
+          {PLANS.map((plan) => (
+            <div
+              key={plan.name}
+              className={`border-r border-b border-[#E5E2DA] p-8 ${plan.highlight ? 'bg-[#F7F4EE]' : 'bg-white'}`}
+            >
+              <div className="font-[family-name:var(--font-barlow)] font-bold text-[16px] uppercase tracking-wide text-[#0D0D0D] mb-6">
+                {plan.name}
+              </div>
+              <div className="flex items-baseline gap-1 mb-8">
+                <span className="font-[family-name:var(--font-barlow)] font-bold text-[56px] text-[#0D0D0D] leading-none">
+                  ${plan.price}
+                </span>
+                <span className="font-mono text-[13px] text-[#8A8A8A]">{plan.period}</span>
+              </div>
+              <ul className="space-y-2 mb-8">
+                {plan.features.map((f) => (
+                  <li key={f} className="font-mono text-[12px] text-[#8A8A8A] flex items-center gap-2">
+                    <span className="w-1 h-1 bg-[#8A8A8A] inline-block shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <Link
+                href="/app"
+                className="block font-mono text-[12px] px-4 py-2.5 border border-[#0D0D0D] text-[#0D0D0D] text-center hover:bg-[#0D0D0D] hover:text-white transition-colors"
+              >
+                {plan.cta}
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+// ─── CTA ─────────────────────────────────────────────────────────────────────
+function CTA() {
+  return (
+    <section className="py-32 px-6 bg-[#0D0D0D]">
+      <div className="max-w-6xl mx-auto text-center">
+        <h2 className="font-[family-name:var(--font-barlow)] font-extrabold text-[64px] md:text-[80px] leading-[0.92] tracking-tight text-[#F7F4EE] mb-10">
+          Your stack is ready.<br />Filament is the wire.
+        </h2>
+        <Link
+          href="/app"
+          className="inline-block font-mono text-[13px] px-8 py-4 border border-white text-white hover:bg-white hover:text-[#0D0D0D] transition-colors"
+        >
+          Get API Key →
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+// ─── Footer ──────────────────────────────────────────────────────────────────
+function Footer() {
+  return (
+    <footer className="py-12 px-6 bg-white border-t border-[#E5E2DA]">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+          <div>
+            <span className="font-[family-name:var(--font-barlow)] font-bold text-[20px] tracking-wide uppercase text-[#0D0D0D]">
+              FILAMENT
+            </span>
+            <p className="font-mono text-[12px] text-[#8A8A8A] mt-1">
+              The wire your AI stack runs on.
+            </p>
+          </div>
+          <div className="flex items-center gap-8 flex-wrap">
+            {[
+              { label: 'Docs', href: '/docs' },
+              { label: 'skill.md', href: '/skill.md' },
+              { label: 'GitHub', href: 'https://github.com/filament-app/filament' },
+              { label: 'X', href: 'https://x.com/filamentworks' },
+            ].map((link) => (
+              <Link
+                key={link.label}
+                href={link.href}
+                className="font-mono text-[12px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div className="mt-8 pt-6 border-t border-[#E5E2DA] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <span className="font-mono text-[11px] text-[#8A8A8A]">
+            © 2026 Filament
+          </span>
+          <div className="flex items-center gap-6">
+            <Link href="/privacy" className="font-mono text-[11px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors">
+              Privacy
+            </Link>
+            <Link href="/terms" className="font-mono text-[11px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors">
+              Terms
+            </Link>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function Page() {
+  return (
+    <>
+      <Nav />
+      <main>
+        <Hero />
+        <Ticker />
+        <HowItWorks />
+        <FeaturesGrid />
+        <CodeDemo />
+        <ObservabilityPreview />
+        <Pricing />
+        <CTA />
+      </main>
+      <Footer />
+    </>
+  )
 }

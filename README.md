@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Filament
 
-## Getting Started
+AI infrastructure layer. One endpoint to route, wire, and observe your AI stack.
 
-First, run the development server:
+## What it does
+
+- **Unified routing** — one API endpoint, any model (Claude, GPT-4o, Gemini)
+- **Tool wiring** — register any HTTP endpoint as an AI tool
+- **Observability** — full trace logs per request: tokens, latency, model, status
+- **Hot-swap** — change the active model mid-session without breaking context
+- **skill.md** — machine-readable spec at `/skill.md` for agent discovery
+
+## Quick start
 
 ```bash
+npm install
+cp .env.local.example .env.local
+# fill in keys
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## API
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Route a prompt
+```bash
+curl -X POST https://filament.works/api/route \
+  -H "Authorization: Bearer fl-..." \
+  -H "Content-Type: application/json" \
+  -d '{"model": "auto", "prompt": "Explain what an embedding is."}'
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### OpenAI drop-in
+```python
+from openai import OpenAI
+client = OpenAI(base_url="https://filament.works/api", api_key="fl-...")
+```
 
-## Learn More
+```javascript
+import OpenAI from 'openai'
+const client = new OpenAI({
+  baseURL: 'https://filament.works/api',
+  apiKey: 'fl-...',
+})
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Endpoints
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /api/route | Route prompt to model |
+| GET | /api/observe | Pull trace logs |
+| POST | /api/wire | Register tool endpoint |
+| PATCH | /api/session/:id | Hot-swap active model |
+| GET | /api/keys | List API keys |
+| POST | /api/keys | Create API key |
+| DELETE | /api/keys | Revoke API key |
+| GET | /skill.md | Machine-readable capability spec |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Auto-routing logic
 
-## Deploy on Vercel
+The `auto` model uses prompt heuristics:
+- Code signals (functions, syntax) → GPT-4o
+- Long-form / reasoning (>500 chars) → Claude
+- Factual / short queries → Gemini
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## skill.md
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Available at [filament.works/skill.md](https://filament.works/skill.md)
+
+Returns `Content-Type: text/plain`. Paste into any agent that supports skill discovery.
+
+## Database
+
+Supabase PostgreSQL with Row Level Security on all tables:
+- `api_keys` — hashed keys, prefix for lookup
+- `trace_logs` — full request traces
+- `wired_tools` — registered tool endpoints
+- `sessions` — session context for hot-swap
+
+Schema: `supabase/schema.sql`
+
+## Stack
+
+Next.js 14 · TypeScript · Supabase · Tailwind CSS · Anthropic · OpenAI · Gemini
