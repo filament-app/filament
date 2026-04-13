@@ -35,8 +35,7 @@ const MODELS: { id: ModelId; label: string; desc: string }[] = [
   { id: 'gemini', label: 'GEMINI', desc: 'gemini-1.5-pro' },
 ]
 
-// ── render counters (module-level, never cause re-renders) ──────────────────
-const rc = { page: 0, input: 0 }
+
 
 // ── InputPanel: memo with constant comparator → NEVER re-renders from props ──
 // Model state lives here (isolated from RouterPage completely)
@@ -48,8 +47,6 @@ const InputPanel = memo(function InputPanel({
   runRef: RefObject<() => void>
   modelRef: RefObject<ModelId>
 }) {
-  rc.input++
-
   const [model, setModel] = useState<ModelId>('auto')
 
   // Register keydown ONCE — no React events on textarea at all
@@ -73,7 +70,7 @@ const InputPanel = memo(function InputPanel({
     const onBlur = (e: FocusEvent) => {
       const to = (e.relatedTarget as HTMLElement | null)?.tagName ?? 'null'
       const el = document.getElementById('fil-dbg')
-      if (el) el.textContent = `blur → ${to} | renders: page=${rc.page} input=${rc.input}`
+      if (el) el.textContent = `blur → ${to}`
     }
     ta.addEventListener('blur', onBlur)
     return () => ta.removeEventListener('blur', onBlur)
@@ -178,8 +175,6 @@ type RefObject<T> = React.MutableRefObject<T>
 
 // ── RouterPage — only holds output state ─────────────────────────────────────
 export default function RouterPage() {
-  rc.page++
-
   const runRef  = useRef<() => void>(() => {})
   const modelRef = useRef<ModelId>('auto')
 
@@ -190,12 +185,7 @@ export default function RouterPage() {
   const [showRaw,  setShowRaw]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
 
-  // Update debug counter after every render — DOM write, not state, so no re-render loop
-  useEffect(() => {
-    const el = document.getElementById('fil-dbg')
-    if (el && !el.textContent?.includes('blur'))
-      el.textContent = `renders: page=${rc.page} input=${rc.input}`
-  })
+
 
   const handleRun = useCallback(async () => {
     const prompt = (document.getElementById('fil-prompt') as HTMLTextAreaElement | null)?.value?.trim() ?? ''
@@ -278,15 +268,7 @@ export default function RouterPage() {
         {!loading && rawJson && showRaw && <pre style={{ fontSize: '12px', lineHeight: 1.6, whiteSpace: 'pre-wrap', background: '#F7F4EE', padding: '16px', overflowX: 'auto', color: '#0D0D0D', margin: 0 }}>{rawJson}</pre>}
       </div>
 
-      {/* ── Debug bar — tells us exactly what's happening ── */}
-      <div id="fil-dbg" style={{
-        position: 'fixed', bottom: 8, right: 8,
-        fontFamily: 'monospace', fontSize: '10px',
-        color: '#999', background: 'rgba(0,0,0,0.06)',
-        padding: '3px 8px', zIndex: 9999, pointerEvents: 'none',
-      }}>
-        renders: page=0 input=0
-      </div>
+
     </div>
   )
 }
