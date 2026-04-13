@@ -38,7 +38,7 @@ export interface WiredTool {
 export interface Session {
   id: string
   user_id: string | null
-  active_model: 'auto' | 'claude' | 'gpt' | 'gemini'
+  active_model: 'auto' | 'claude' | 'gpt' | 'gemini' | 'venice'
   context: Message[]
   created_at: string
   updated_at: string
@@ -49,7 +49,7 @@ export interface Message {
   content: string
 }
 
-export type ModelId = 'claude' | 'gpt' | 'gemini' | 'auto'
+export type ModelId = 'claude' | 'gpt' | 'gemini' | 'venice' | 'auto'
 
 export interface RouteRequest {
   prompt: string

@@ -3,6 +3,7 @@ import { resolveModel } from '@/lib/router'
 import { callClaude } from '@/lib/providers/anthropic'
 import { callGPT } from '@/lib/providers/openai'
 import { callGemini } from '@/lib/providers/gemini'
+import { callVenice } from '@/lib/providers/venice'
 import { ModelId } from '@/types'
 
 export async function POST(req: Request) {
@@ -47,16 +48,21 @@ export async function POST(req: Request) {
         content = result.content
         tokens_in = result.tokens_in
         tokens_out = result.tokens_out
+      } else if (selectedModel === 'venice') {
+        const result = await callVenice({ prompt, system })
+        content = result.content
+        tokens_in = result.tokens_in
+        tokens_out = result.tokens_out
       }
     } catch (providerError: unknown) {
-      // Fallback: try next model
+      // Fallback chain: try claude, then venice
       status = 'fallback'
       errorMsg = providerError instanceof Error ? providerError.message : 'Provider error'
       try {
-        const fallback: ModelId = selectedModel === 'claude' ? 'gemini' : 'claude'
+        const fallback: ModelId = selectedModel === 'claude' ? 'venice' : 'claude'
         modelUsed = fallback
-        if (fallback === 'gemini') {
-          const result = await callGemini({ prompt, system })
+        if (fallback === 'venice') {
+          const result = await callVenice({ prompt, system })
           content = result.content
           tokens_in = result.tokens_in
           tokens_out = result.tokens_out

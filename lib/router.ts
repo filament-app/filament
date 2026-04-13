@@ -1,6 +1,6 @@
 import { ModelId } from '@/types'
 
-export function selectModel(prompt: string): 'claude' | 'gpt' | 'gemini' {
+export function selectModel(prompt: string): 'claude' | 'gpt' | 'gemini' | 'venice' {
   const lower = prompt.toLowerCase()
   
   // Code generation signals → GPT-4o
@@ -20,7 +20,7 @@ export function selectModel(prompt: string): 'claude' | 'gpt' | 'gemini' {
   return 'gemini'
 }
 
-export function resolveModel(model: ModelId, prompt: string): 'claude' | 'gpt' | 'gemini' {
+export function resolveModel(model: ModelId, prompt: string): 'claude' | 'gpt' | 'gemini' | 'venice' {
   if (model === 'auto') return selectModel(prompt)
-  return model as 'claude' | 'gpt' | 'gemini'
+  return model as 'claude' | 'gpt' | 'gemini' | 'venice'
 }

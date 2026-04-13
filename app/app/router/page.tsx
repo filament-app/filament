@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, memo, useEffect } from 'react'
 
-type ModelId = 'auto' | 'claude' | 'gpt' | 'gemini'
+type ModelId = 'auto' | 'claude' | 'gpt' | 'gemini' | 'venice'
 
 interface TraceInfo {
   model_used: string
@@ -33,6 +33,7 @@ const MODELS: { id: ModelId; label: string; desc: string }[] = [
   { id: 'claude', label: 'CLAUDE', desc: 'claude-sonnet-4' },
   { id: 'gpt',    label: 'GPT',    desc: 'gpt-4o' },
   { id: 'gemini', label: 'GEMINI', desc: 'gemini-1.5-pro' },
+  { id: 'venice', label: 'VENICE', desc: 'llama-3.3-70b' },
 ]
 
 
