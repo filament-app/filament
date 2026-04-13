@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 
 type ModelId = 'auto' | 'claude' | 'gpt' | 'gemini'
 
@@ -32,80 +32,6 @@ function saveTraceLog(data: {
   }, ...existing].slice(0, 200)))
 }
 
-// ─── IsolatedTextarea ──────────────────────────────────────────────────────
-// Created imperatively via useEffect — React NEVER reconciles this DOM node.
-// No React re-render can unmount, remount, or steal focus from it.
-const TEXTAREA_STYLE = `
-  width: 100%;
-  font-family: monospace;
-  font-size: 16px;
-  line-height: 1.5;
-  padding: 10px 12px;
-  border: 1px solid #E5E2DA;
-  color: #0D0D0D;
-  resize: none;
-  outline: none;
-  box-sizing: border-box;
-  display: block;
-  border-radius: 0;
-  -webkit-appearance: none;
-  appearance: none;
-`
-
-interface IsolatedHandle { getValue: () => string }
-
-const IsolatedTextarea = forwardRef<IsolatedHandle, {
-  placeholder: string
-  rows: number
-  background?: string
-  onCtrlEnter?: () => void
-}>(function IsolatedTextarea({ placeholder, rows, background = '#fff', onCtrlEnter }, ref) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const taRef        = useRef<HTMLTextAreaElement | null>(null)
-  // stable ref for callback — updating it never triggers effect
-  const cbRef        = useRef(onCtrlEnter)
-  cbRef.current      = onCtrlEnter
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container || taRef.current) return
-
-    const ta        = document.createElement('textarea')
-    ta.placeholder  = placeholder
-    ta.rows         = rows
-    ta.style.cssText = TEXTAREA_STYLE + `background: ${background};`
-    ta.setAttribute('data-gramm',              'false')
-    ta.setAttribute('data-gramm_editor',       'false')
-    ta.setAttribute('data-enable-grammarly',   'false')
-    ta.setAttribute('autocomplete',            'off')
-    ta.setAttribute('autocorrect',             'off')
-    ta.setAttribute('autocapitalize',          'off')
-    ta.setAttribute('spellcheck',              'false')
-
-    ta.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-        cbRef.current?.()
-      }
-    })
-
-    container.appendChild(ta)
-    taRef.current = ta
-
-    return () => {
-      ta.remove()
-      taRef.current = null
-    }
-  }, []) // ← empty: created once, React never touches it again
-
-  useImperativeHandle(ref, () => ({
-    getValue: () => taRef.current?.value.trim() ?? '',
-  }))
-
-  // container div is a stable mounting point — React only renders this div
-  return <div ref={containerRef} style={{ width: '100%' }} />
-})
-
-// ─── Models ───────────────────────────────────────────────────────────────────
 const MODELS: { id: ModelId; label: string; desc: string }[] = [
   { id: 'auto',   label: 'AUTO',   desc: 'Auto-select' },
   { id: 'claude', label: 'CLAUDE', desc: 'claude-sonnet-4' },
@@ -113,11 +39,74 @@ const MODELS: { id: ModelId; label: string; desc: string }[] = [
   { id: 'gemini', label: 'GEMINI', desc: 'gemini-1.5-pro' },
 ]
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-export default function RouterPage() {
-  const promptHandle = useRef<IsolatedHandle>(null)
-  const systemHandle = useRef<IsolatedHandle>(null)
+// ─────────────────────────────────────────────────────────────────────────────
+// CONSTANT HTML string defined at MODULE LEVEL.
+// React compares __html by value on every reconcile.
+// Because this string NEVER changes, React will call innerHTML exactly ONCE
+// (on first render) and then SKIP every subsequent reconcile.
+// The textarea DOM nodes are therefore completely outside React's control.
+// ─────────────────────────────────────────────────────────────────────────────
+const TA_STYLE = [
+  'width:100%',
+  'font-family:monospace',
+  'font-size:16px',
+  'line-height:1.6',
+  'padding:10px 12px',
+  'border:1px solid #E5E2DA',
+  'color:#0D0D0D',
+  'resize:none',
+  'outline:none',
+  'box-sizing:border-box',
+  'display:block',
+  '-webkit-appearance:none',
+  'appearance:none',
+  'border-radius:0',
+].join(';')
 
+const SHARED_ATTRS = [
+  'autocomplete="off"',
+  'autocorrect="off"',
+  'autocapitalize="off"',
+  'spellcheck="false"',
+  'data-gramm="false"',
+  'data-gramm_editor="false"',
+  'data-enable-grammarly="false"',
+].join(' ')
+
+const PROMPTS_HTML = `
+<div style="margin-bottom:20px">
+  <div style="font-size:11px;font-family:monospace;color:#8A8A8A;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">
+    System prompt (optional)
+  </div>
+  <textarea
+    id="fil-system"
+    rows="2"
+    placeholder="You are a helpful assistant."
+    ${SHARED_ATTRS}
+    style="${TA_STYLE};background:#F7F4EE"
+  ></textarea>
+</div>
+<div style="margin-bottom:20px">
+  <div style="font-size:11px;font-family:monospace;color:#8A8A8A;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px">
+    Prompt
+  </div>
+  <textarea
+    id="fil-prompt"
+    rows="7"
+    placeholder="What is an embedding?"
+    ${SHARED_ATTRS}
+    style="${TA_STYLE};background:#fff"
+  ></textarea>
+  <div style="font-size:10px;font-family:monospace;color:#8A8A8A;margin-top:4px">
+    Cmd+Enter to run
+  </div>
+</div>
+`
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Page
+// ─────────────────────────────────────────────────────────────────────────────
+export default function RouterPage() {
   const [model,    setModel]    = useState<ModelId>('auto')
   const [loading,  setLoading]  = useState(false)
   const [response, setResponse] = useState('')
@@ -126,12 +115,12 @@ export default function RouterPage() {
   const [showRaw,  setShowRaw]  = useState(false)
   const [error,    setError]    = useState<string | null>(null)
 
-  // stable ref so IsolatedTextarea's keydown listener always calls latest handleRun
-  const handleRunRef = useRef<() => void>(() => {})
+  // Stable ref so the keydown listener never needs to be re-added
+  const runRef = useRef<() => Promise<void>>(async () => {})
 
   const handleRun = useCallback(async () => {
-    const prompt = promptHandle.current?.getValue() ?? ''
-    const system = systemHandle.current?.getValue() ?? ''
+    const prompt = (document.getElementById('fil-prompt') as HTMLTextAreaElement | null)?.value?.trim() ?? ''
+    const system = (document.getElementById('fil-system') as HTMLTextAreaElement | null)?.value?.trim() ?? ''
     if (!prompt) return
 
     setLoading(true)
@@ -168,10 +157,23 @@ export default function RouterPage() {
     }
   }, [model])
 
-  // keep stable ref in sync
-  handleRunRef.current = handleRun
+  // Keep ref in sync — the keydown listener calls runRef.current() so it
+  // always calls the latest handleRun without needing to re-register the listener
+  runRef.current = handleRun
 
-  const stableRun = useCallback(() => handleRunRef.current(), [])
+  // Register Cmd+Enter on textarea — runs ONCE, never re-runs
+  useEffect(() => {
+    const ta = document.getElementById('fil-prompt') as HTMLTextAreaElement | null
+    if (!ta) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        runRef.current()
+      }
+    }
+    ta.addEventListener('keydown', onKeyDown)
+    return () => ta.removeEventListener('keydown', onKeyDown)
+  }, []) // ← empty: registered once, never touched again
 
   return (
     <div style={{ padding: '16px 20px 80px', fontFamily: 'monospace', maxWidth: '720px' }}>
@@ -186,8 +188,8 @@ export default function RouterPage() {
         </div>
       </div>
 
-      {/* Model pills */}
-      <div style={{ marginBottom: '20px' }}>
+      {/* Model pills — React-managed, re-renders only affect this section */}
+      <div style={{ marginBottom: '24px' }}>
         <div style={{ fontSize: '11px', color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '10px' }}>
           Model
         </div>
@@ -207,54 +209,40 @@ export default function RouterPage() {
         </div>
       </div>
 
-      {/* System prompt — imperative DOM, React never reconciles */}
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ fontSize: '11px', color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
-          System prompt (optional)
-        </div>
-        <IsolatedTextarea
-          ref={systemHandle}
-          placeholder="You are a helpful assistant."
-          rows={2}
-          background="#F7F4EE"
-          onCtrlEnter={stableRun}
-        />
-      </div>
+      {/*
+        ── TEXTAREAS ──────────────────────────────────────────────────────────
+        dangerouslySetInnerHTML with a MODULE-LEVEL CONSTANT.
+        React diffs __html by value. Since PROMPTS_HTML never changes,
+        React will NEVER call innerHTML again after the first render.
+        These textarea nodes are 100% outside React's reconciliation.
+      */}
+      <div dangerouslySetInnerHTML={{ __html: PROMPTS_HTML }} />
 
-      {/* Prompt — imperative DOM, React never reconciles */}
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ fontSize: '11px', color: '#8A8A8A', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
-          Prompt
-        </div>
-        <IsolatedTextarea
-          ref={promptHandle}
-          placeholder="What is an embedding?"
-          rows={7}
-          background="#fff"
-          onCtrlEnter={stableRun}
-        />
-        <div style={{ fontSize: '10px', color: '#8A8A8A', marginTop: '4px' }}>Cmd+Enter to run</div>
-      </div>
-
-      {/* Run */}
-      <button type="button" onClick={handleRun} disabled={loading} style={{
-        width: '100%', fontFamily: 'monospace', fontSize: '13px', padding: '12px',
-        border: '1px solid #0D0D0D',
-        background: loading ? '#0D0D0D' : '#fff',
-        color: loading ? '#fff' : '#0D0D0D',
-        cursor: loading ? 'not-allowed' : 'pointer',
-        opacity: loading ? 0.6 : 1, marginBottom: '28px',
-      }}>
+      {/* Run button */}
+      <button
+        type="button"
+        onClick={handleRun}
+        disabled={loading}
+        style={{
+          width: '100%', fontFamily: 'monospace', fontSize: '13px', padding: '12px',
+          border: '1px solid #0D0D0D',
+          background: loading ? '#0D0D0D' : '#fff',
+          color: loading ? '#fff' : '#0D0D0D',
+          cursor: loading ? 'not-allowed' : 'pointer',
+          opacity: loading ? 0.6 : 1, marginBottom: '28px',
+        }}
+      >
         {loading ? 'Running...' : 'Run →'}
       </button>
 
-      {/* Output */}
+      {/* Empty state */}
       {!loading && !error && !response && (
         <div style={{ textAlign: 'center', padding: '40px 0', color: '#8A8A8A', fontSize: '13px' }}>
           Response appears here after you run a prompt.
         </div>
       )}
 
+      {/* Output — React-managed, re-renders here never affect the textareas above */}
       {(loading || error || response) && (
         <div style={{ borderTop: '1px solid #E5E2DA', paddingTop: '16px' }}>
           {trace && (
