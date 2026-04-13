@@ -65,7 +65,7 @@ function InputPanel({
   loading, onRun,
 }: InputPanelProps) {
   return (
-    <div className="flex flex-col gap-5 p-4 md:p-6 overflow-y-auto">
+    <div className="flex flex-col gap-5 p-4 md:p-6">
       {/* Model selector */}
       <div>
         <label className="font-mono text-[11px] text-[#8A8A8A] uppercase tracking-widest block mb-3">
@@ -328,7 +328,7 @@ export default function RouterPage() {
 
       {/* Desktop: split pane */}
       <div className="hidden md:flex" style={{ height: 'calc(100vh - 108px)' }}>
-        <div className="w-[40%] border-r border-[#E5E2DA] overflow-y-auto">
+        <div className="w-[40%] border-r border-[#E5E2DA]">
           <InputPanel {...inputProps} />
         </div>
         <div className="flex-1 flex flex-col overflow-hidden">
