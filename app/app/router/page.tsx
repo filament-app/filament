@@ -225,9 +225,10 @@ export default function RouterPage() {
   runRef.current = handleRun
 
   return (
-    <div style={{ padding: '16px 20px 80px', fontFamily: 'monospace', maxWidth: '720px' }}>
+    <div style={{ fontFamily: 'monospace' }}>
 
-      <div style={{ borderBottom: '1px solid #E5E2DA', paddingBottom: '12px', marginBottom: '24px' }}>
+      {/* Title */}
+      <div style={{ borderBottom: '1px solid #E5E2DA', padding: '16px 20px 12px' }}>
         <div style={{ fontSize: '18px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', fontFamily: 'var(--font-barlow)' }}>
           Unified Router
         </div>
@@ -236,38 +237,69 @@ export default function RouterPage() {
         </div>
       </div>
 
-      <InputPanel runRef={runRef} modelRef={modelRef} />
+      {/* Split: input left, output right on desktop */}
+      <div style={{ display: 'flex', flexDirection: 'row', minHeight: 'calc(100vh - 112px)' }}>
 
-      <div style={{ borderTop: '1px solid #E5E2DA', marginTop: '28px', paddingTop: '20px' }}>
-        {loading && <div style={{ fontFamily: 'monospace', fontSize: '13px', color: '#8A8A8A' }}>Routing request...</div>}
-        {!loading && error && <div style={{ border: '1px solid #6a2a2a', padding: '12px', fontFamily: 'monospace', fontSize: '13px', color: '#6a2a2a' }}>{error}</div>}
-        {!loading && !error && !response && (
-          <div style={{ textAlign: 'center', padding: '32px 0', color: '#8A8A8A', fontSize: '13px', fontFamily: 'monospace' }}>
-            Response appears here after you run a prompt.
-          </div>
-        )}
-        {!loading && trace && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', marginBottom: '16px', padding: '10px 12px', background: '#F7F4EE', fontFamily: 'monospace' }}>
-            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>{trace.model_used}</span>
-            <span style={{ fontSize: '11px', color: '#8A8A8A' }}>{trace.tokens_in}→{trace.tokens_out} tok</span>
-            <span style={{ fontSize: '11px', color: '#8A8A8A' }}>{trace.latency_ms}ms</span>
-            <span style={{ fontSize: '10px', padding: '2px 6px', border: `1px solid ${trace.status === 'ok' ? '#2a6a3a' : '#6a2a2a'}`, color: trace.status === 'ok' ? '#2a6a3a' : '#6a2a2a' }}>{trace.status}</span>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
-              <button type="button" onClick={() => setShowRaw(!showRaw)} style={{ fontFamily: 'monospace', fontSize: '11px', color: '#8A8A8A', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                {showRaw ? 'Response' : 'Raw JSON'}
-              </button>
-              {response && (
-                <button type="button" onClick={() => navigator.clipboard.writeText(showRaw ? rawJson || '' : response)} style={{ fontFamily: 'monospace', fontSize: '11px', color: '#8A8A8A', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  Copy
-                </button>
-              )}
+        {/* Left panel */}
+        <div style={{ width: '42%', borderRight: '1px solid #E5E2DA', padding: '20px', flexShrink: 0 }}
+          className="router-left">
+          <InputPanel runRef={runRef} modelRef={modelRef} />
+        </div>
+
+        {/* Right panel */}
+        <div style={{ flex: 1, overflow: 'auto' }} className="router-right">
+          {loading && (
+            <div style={{ padding: '20px', fontSize: '13px', color: '#8A8A8A' }}>Routing request...</div>
+          )}
+          {!loading && error && (
+            <div style={{ margin: '20px', border: '1px solid #6a2a2a', padding: '12px', fontSize: '13px', color: '#6a2a2a' }}>{error}</div>
+          )}
+          {!loading && !error && !response && (
+            <div style={{ textAlign: 'center', padding: '80px 20px', color: '#C8C4BC', fontSize: '13px' }}>
+              Response appears here.
             </div>
-          </div>
-        )}
-        {!loading && response && !showRaw && <div style={{ fontSize: '14px', lineHeight: 1.7, whiteSpace: 'pre-wrap', color: '#0D0D0D', fontFamily: 'monospace' }}>{response}</div>}
-        {!loading && rawJson && showRaw && <pre style={{ fontSize: '12px', lineHeight: 1.6, whiteSpace: 'pre-wrap', background: '#F7F4EE', padding: '16px', overflowX: 'auto', color: '#0D0D0D', margin: 0 }}>{rawJson}</pre>}
+          )}
+          {(trace || response) && (
+            <>
+              {trace && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center', padding: '10px 16px', background: '#F7F4EE', borderBottom: '1px solid #E5E2DA' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>{trace.model_used}</span>
+                  <span style={{ fontSize: '11px', color: '#8A8A8A' }}>{trace.tokens_in}→{trace.tokens_out} tok</span>
+                  <span style={{ fontSize: '11px', color: '#8A8A8A' }}>{trace.latency_ms}ms</span>
+                  <span style={{ fontSize: '10px', padding: '2px 6px', border: `1px solid ${trace.status === 'ok' ? '#2a6a3a' : '#6a2a2a'}`, color: trace.status === 'ok' ? '#2a6a3a' : '#6a2a2a' }}>{trace.status}</span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: '12px' }}>
+                    <button type="button" onClick={() => setShowRaw(!showRaw)} style={{ fontFamily: 'monospace', fontSize: '11px', color: '#8A8A8A', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                      {showRaw ? 'Response' : 'Raw JSON'}
+                    </button>
+                    {response && (
+                      <button type="button" onClick={() => navigator.clipboard.writeText(showRaw ? rawJson || '' : response)} style={{ fontFamily: 'monospace', fontSize: '11px', color: '#8A8A8A', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                        Copy
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+              <div style={{ padding: '16px 20px' }}>
+                {!showRaw && response && (
+                  <div style={{ fontSize: '14px', lineHeight: 1.7, whiteSpace: 'pre-wrap', color: '#0D0D0D' }}>{response}</div>
+                )}
+                {showRaw && rawJson && (
+                  <pre style={{ fontSize: '12px', lineHeight: 1.6, whiteSpace: 'pre-wrap', background: '#F7F4EE', padding: '16px', overflowX: 'auto', color: '#0D0D0D', margin: 0 }}>{rawJson}</pre>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
       </div>
 
+      {/* Mobile: stack vertically */}
+      <style>{`
+        @media (max-width: 768px) {
+          .router-left { width: 100% !important; border-right: none !important; border-bottom: 1px solid #E5E2DA; }
+          div[style*="flex-direction: row"] { flex-direction: column !important; }
+        }
+      `}</style>
 
     </div>
   )
