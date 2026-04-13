@@ -1,79 +1,31 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { generateApiKey, hashApiKey } from '@/lib/crypto'
+import { randomBytes } from 'crypto'
 
-export async function GET() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { data: keys, error } = await supabase
-    .from('api_keys')
-    .select('id, key_prefix, name, created_at, last_used, revoked')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ keys: keys || [] })
-}
+// Keys are stateless — generated server-side with crypto.
+// The client stores them in localStorage. No DB needed.
 
 export async function POST(req: Request) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  try {
+    const { name } = await req.json()
 
-  const { name } = await req.json().catch(() => ({ name: null }))
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json({ error: 'name is required' }, { status: 400 })
+    }
 
-  const { raw, prefix } = generateApiKey()
-  const hash = await hashApiKey(raw)
+    const raw = 'fl-' + randomBytes(24).toString('hex')
+    const prefix = raw.substring(0, 10)
+    const id = crypto.randomUUID()
 
-  const { data: key, error } = await supabase
-    .from('api_keys')
-    .insert({
-      user_id: user.id,
-      key_hash: hash,
+    return NextResponse.json({
+      id,
+      name: name.trim(),
+      key: raw,
       key_prefix: prefix,
-      name: name || 'Default',
+      created_at: new Date().toISOString(),
+      revoked: false,
     })
-    .select('id, key_prefix, name, created_at')
-    .single()
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Internal error'
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
-
-  // Return the raw key ONCE — never stored in plaintext again
-  return NextResponse.json({ ...key, key: raw })
-}
-
-export async function DELETE(req: Request) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const { id } = await req.json()
-
-  const { error } = await supabase
-    .from('api_keys')
-    .update({ revoked: true })
-    .eq('id', id)
-    .eq('user_id', user.id)
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  return NextResponse.json({ status: 'revoked' })
 }

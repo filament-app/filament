@@ -1,112 +1,114 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 
 interface ApiKey {
   id: string
+  name: string
+  key: string
   key_prefix: string
-  name: string | null
   created_at: string
-  last_used: string | null
   revoked: boolean
-  key?: string
+}
+
+const STORAGE_KEY = 'filament_api_keys'
+
+function loadKeys(): ApiKey[] {
+  if (typeof window === 'undefined') return []
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+  } catch {
+    return []
+  }
+}
+
+function saveKeys(keys: ApiKey[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(keys))
 }
 
 export default function KeysPage() {
   const [keys, setKeys] = useState<ApiKey[]>([])
-  const [loading, setLoading] = useState(true)
-  const [creating, setCreating] = useState(false)
   const [newKeyName, setNewKeyName] = useState('')
+  const [creating, setCreating] = useState(false)
   const [newKeyRaw, setNewKeyRaw] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchKeys = useCallback(async () => {
-    try {
-      const res = await fetch('/api/keys')
-      if (res.status === 401) {
-        setError('Sign in to manage API keys.')
-        setLoading(false)
-        return
-      }
-      const data = await res.json()
-      setKeys(data.keys || [])
-    } catch {
-      setError('Failed to load keys.')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    fetchKeys()
-  }, [fetchKeys])
+    setMounted(true)
+    setKeys(loadKeys())
+  }, [])
 
   async function createKey() {
+    if (!newKeyName.trim()) return
     setCreating(true)
-    setNewKeyRaw(null)
+
     try {
       const res = await fetch('/api/keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newKeyName || 'Default' }),
+        body: JSON.stringify({ name: newKeyName.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error)
-        return
-      }
+      if (!res.ok) throw new Error(data.error)
+
+      const updated = [data, ...loadKeys()]
+      saveKeys(updated)
+      setKeys(updated)
       setNewKeyRaw(data.key)
       setNewKeyName('')
-      await fetchKeys()
-    } catch {
-      setError('Failed to create key.')
+    } catch (err) {
+      console.error(err)
     } finally {
       setCreating(false)
     }
   }
 
-  async function revokeKey(id: string) {
-    try {
-      await fetch('/api/keys', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      })
-      await fetchKeys()
-    } catch {
-      setError('Failed to revoke key.')
-    }
+  function revokeKey(id: string) {
+    const updated = loadKeys().map(k => k.id === id ? { ...k, revoked: true } : k)
+    saveKeys(updated)
+    setKeys(updated)
   }
 
-  const DEMO_KEYS: ApiKey[] = [
-    { id: '1', key_prefix: 'fl-a3f9c2', name: 'Production', created_at: '2026-01-01T00:00:00Z', last_used: '2026-01-08T14:32:01Z', revoked: false },
-    { id: '2', key_prefix: 'fl-b8d4e1', name: 'Development', created_at: '2026-01-05T00:00:00Z', last_used: null, revoked: false },
-  ]
+  function deleteKey(id: string) {
+    const updated = loadKeys().filter(k => k.id !== id)
+    saveKeys(updated)
+    setKeys(updated)
+  }
 
-  const displayKeys = error?.includes('Sign in') ? DEMO_KEYS : keys
+  function copyKey(key: string, id: string) {
+    navigator.clipboard.writeText(key)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
+  if (!mounted) return null
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
-      <div className="mb-10">
-        <h1 className="font-[family-name:var(--font-barlow)] font-bold text-[32px] uppercase tracking-wide text-[#0D0D0D]">
+    <div className="max-w-3xl mx-auto px-4 md:px-6 py-10">
+      {/* Header */}
+      <div className="mb-8 pb-6 border-b border-[#E5E2DA]">
+        <h1 className="font-[family-name:var(--font-barlow)] font-bold text-[28px] uppercase tracking-wide text-[#0D0D0D]">
           API Keys
         </h1>
         <p className="font-mono text-[12px] text-[#8A8A8A] mt-1">
-          Keys authenticate requests to /api/route and other endpoints.
+          Keys are generated locally and stored in your browser.
         </p>
       </div>
 
       {/* New key revealed */}
       {newKeyRaw && (
-        <div className="border border-[#2a6a3a] bg-[#F7F4EE] p-6 mb-8">
+        <div className="border border-[#2a6a3a] bg-[#F7F4EE] p-5 mb-6">
           <p className="font-mono text-[11px] text-[#2a6a3a] mb-3 uppercase tracking-widest">
-            Key created — copy it now. It will not be shown again.
+            ✓ Key created — copy it now. Shown once only.
           </p>
-          <div className="flex items-center gap-4">
-            <code className="font-mono text-[13px] text-[#0D0D0D] flex-1 overflow-x-auto">{newKeyRaw}</code>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <code className="font-mono text-[12px] text-[#0D0D0D] break-all flex-1 bg-white border border-[#E5E2DA] px-3 py-2 w-full">
+              {newKeyRaw}
+            </code>
             <button
-              onClick={() => { navigator.clipboard.writeText(newKeyRaw); setNewKeyRaw(null) }}
-              className="font-mono text-[12px] px-4 py-2 border border-[#0D0D0D] text-[#0D0D0D] hover:bg-[#0D0D0D] hover:text-white transition-colors shrink-0"
+              onClick={() => { copyKey(newKeyRaw, 'new'); setNewKeyRaw(null) }}
+              className="font-mono text-[12px] px-4 py-2 border border-[#0D0D0D] text-[#0D0D0D] hover:bg-[#0D0D0D] hover:text-white transition-colors whitespace-nowrap shrink-0"
             >
               Copy + dismiss
             </button>
@@ -115,63 +117,69 @@ export default function KeysPage() {
       )}
 
       {/* Create form */}
-      {!error?.includes('Sign in') && (
-        <div className="border border-[#E5E2DA] p-6 mb-8 flex items-center gap-4 flex-wrap">
+      <div className="border border-[#E5E2DA] p-5 mb-8">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <input
             type="text"
             value={newKeyName}
             onChange={(e) => setNewKeyName(e.target.value)}
             placeholder="Key name (e.g. Production)"
-            className="font-mono text-[12px] px-3 py-2 border border-[#E5E2DA] text-[#0D0D0D] focus:outline-none focus:border-[#0D0D0D] flex-1 min-w-0 placeholder-[#8A8A8A]"
+            className="font-mono text-[13px] px-3 py-2.5 border border-[#E5E2DA] text-[#0D0D0D] focus:outline-none focus:border-[#0D0D0D] flex-1 placeholder-[#8A8A8A] bg-white"
             onKeyDown={(e) => e.key === 'Enter' && createKey()}
           />
           <button
             onClick={createKey}
-            disabled={creating}
-            className="font-mono text-[12px] px-5 py-2 border border-[#0D0D0D] text-[#0D0D0D] hover:bg-[#0D0D0D] hover:text-white transition-colors disabled:opacity-40"
+            disabled={creating || !newKeyName.trim()}
+            className="font-mono text-[13px] px-5 py-2.5 border border-[#0D0D0D] text-[#0D0D0D] hover:bg-[#0D0D0D] hover:text-white transition-colors disabled:opacity-40 whitespace-nowrap"
           >
             {creating ? 'Creating...' : 'Create key'}
           </button>
         </div>
-      )}
+      </div>
 
-      {error && (
-        <div className="font-mono text-[12px] text-[#6a2a2a] border border-[#6a2a2a] p-4 mb-6">
-          {error} — showing demo data.
-        </div>
-      )}
-
-      {loading ? (
-        <div className="font-mono text-[13px] text-[#8A8A8A]">Loading...</div>
-      ) : (
-        <div className="border border-[#E5E2DA]">
-          {displayKeys.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="font-mono text-[13px] text-[#8A8A8A]">No keys yet. Create your first key above.</p>
-            </div>
-          ) : (
-            displayKeys.map((key, i) => (
-              <div key={key.id} className={`flex items-center justify-between p-5 ${i < displayKeys.length - 1 ? 'border-b border-[#E5E2DA]' : ''}`}>
-                <div className="flex items-center gap-6 flex-wrap">
-                  <div>
-                    <div className="font-mono text-[13px] text-[#0D0D0D] font-medium">{key.name || 'Unnamed'}</div>
-                    <div className="font-mono text-[11px] text-[#8A8A8A] mt-0.5">{key.key_prefix}••••••••••••••••••••</div>
+      {/* Keys list */}
+      <div className="border border-[#E5E2DA]">
+        {keys.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="font-mono text-[13px] text-[#8A8A8A]">No keys yet. Create your first key above.</p>
+          </div>
+        ) : (
+          keys.map((key, i) => (
+            <div
+              key={key.id}
+              className={`p-4 md:p-5 ${i < keys.length - 1 ? 'border-b border-[#E5E2DA]' : ''} ${key.revoked ? 'opacity-50' : ''}`}
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+                {/* Key info */}
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[13px] text-[#0D0D0D] font-medium">{key.name}</div>
+                  <div className="font-mono text-[11px] text-[#8A8A8A] mt-0.5">
+                    {key.key_prefix}••••••••••••••••
+                    <span className="ml-3">{new Date(key.created_at).toLocaleDateString()}</span>
                   </div>
-                  <div className="font-mono text-[11px] text-[#8A8A8A]">
-                    Created {new Date(key.created_at).toLocaleDateString()}
-                  </div>
-                  {key.last_used && (
-                    <div className="font-mono text-[11px] text-[#8A8A8A]">
-                      Last used {new Date(key.last_used).toLocaleDateString()}
-                    </div>
-                  )}
                 </div>
-                <div className="flex items-center gap-3">
+
+                {/* Actions */}
+                <div className="flex items-center gap-3 flex-wrap">
                   {key.revoked ? (
-                    <span className="font-mono text-[11px] px-2 py-0.5 border border-[#6a2a2a] text-[#6a2a2a]">revoked</span>
+                    <>
+                      <span className="font-mono text-[11px] px-2 py-0.5 border border-[#6a2a2a] text-[#6a2a2a]">revoked</span>
+                      <button
+                        onClick={() => deleteKey(key.id)}
+                        className="font-mono text-[11px] text-[#8A8A8A] hover:text-[#6a2a2a] transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </>
                   ) : (
                     <>
                       <span className="font-mono text-[11px] px-2 py-0.5 border border-[#2a6a3a] text-[#2a6a3a]">active</span>
+                      <button
+                        onClick={() => copyKey(key.key, key.id)}
+                        className="font-mono text-[11px] text-[#8A8A8A] hover:text-[#0D0D0D] transition-colors"
+                      >
+                        {copiedId === key.id ? '✓ Copied' : 'Copy key'}
+                      </button>
                       <button
                         onClick={() => revokeKey(key.id)}
                         className="font-mono text-[11px] text-[#8A8A8A] hover:text-[#6a2a2a] transition-colors"
@@ -182,10 +190,19 @@ export default function KeysPage() {
                   )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Note */}
+      <div className="mt-6 border border-[#E5E2DA] bg-[#F7F4EE] p-4">
+        <p className="font-mono text-[11px] text-[#8A8A8A] leading-relaxed">
+          Keys are stored in your browser&apos;s localStorage. To use a key: add{' '}
+          <code className="text-[#0D0D0D]">Authorization: Bearer fl-...</code>{' '}
+          to your API requests.
+        </p>
+      </div>
     </div>
   )
 }
