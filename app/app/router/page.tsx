@@ -143,6 +143,13 @@ export default function RouterPage() {
           ref={systemRef}
           rows={2}
           placeholder="You are a helpful assistant."
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-gramm="false"
+          data-gramm_editor="false"
+          data-enable-grammarly="false"
           style={{
             width: '100%',
             fontFamily: 'monospace',
@@ -151,10 +158,12 @@ export default function RouterPage() {
             border: '1px solid #E5E2DA',
             background: '#F7F4EE',
             color: '#0D0D0D',
-            resize: 'vertical',
+            resize: 'none',
             outline: 'none',
             boxSizing: 'border-box',
             display: 'block',
+            WebkitUserSelect: 'text',
+            touchAction: 'manipulation',
           }}
         />
       </div>
@@ -168,6 +177,13 @@ export default function RouterPage() {
           ref={promptRef}
           rows={7}
           placeholder="What is an embedding?"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-gramm="false"
+          data-gramm_editor="false"
+          data-enable-grammarly="false"
           style={{
             width: '100%',
             fontFamily: 'monospace',
@@ -176,10 +192,12 @@ export default function RouterPage() {
             border: '1px solid #E5E2DA',
             background: '#fff',
             color: '#0D0D0D',
-            resize: 'vertical',
+            resize: 'none',
             outline: 'none',
             boxSizing: 'border-box',
             display: 'block',
+            WebkitUserSelect: 'text',
+            touchAction: 'manipulation',
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleRun()
